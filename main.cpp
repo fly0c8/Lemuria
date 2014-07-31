@@ -1,71 +1,99 @@
 #include <SDL.h>
 #include <iostream>
+#include <sstream>
 
 using namespace std;
 
-const char* HELLO_BMP = "/home/arnold/Pictures/hello.bmp";
+//const char* HELLO_BMP = "/home/arnold/Pictures/hello.bmp";
+const char* HELLO_BMP = "C:/Users/arnold/Pictures/hello.bmp";
 
 SDL_Renderer* gRenderer = 0;
 SDL_Window* gWindow = 0;
+stringstream gErr;
+SDL_Texture* gTex = 0;
+
+SDL_Rect gPos { 0,0,800,600};
+int gDx = 1;
+
+void die(const char* error) {
+    cerr << error << endl;
+    exit(1);
+}
 
 SDL_Texture* loadTexture(const char* filepath) {
 
     SDL_Texture* newTexture = NULL;
     SDL_Surface* loadedSurface = SDL_LoadBMP(filepath);
     if(!loadedSurface) {
-        cerr << "Cannot load image " << filepath << endl;
-        exit(1);
+        gErr << "Cannot load image " << filepath;
+        die(gErr.str().c_str());
     }
-    newTexture = SDL_CreateTextureFromSurface(gRenderer,loadedSurface);
+    newTexture = SDL_CreateTextureFromSurface(gRenderer,loadedSurface);    
     if(!newTexture){
-        cerr << "Unable to create texture from " << filepath << endl;
-        exit(1);
+        gErr << "Unable to create texture from " << filepath << endl;
+        die(gErr.str().c_str());
     }
-    SDL_FreeSurface( loadedSurface );
+    SDL_FreeSurface(loadedSurface);
     return newTexture;
 }
 
-int main()
-{
-    if(SDL_Init(SDL_INIT_VIDEO) < 0) {
-        cerr << "Cannot init SDL" << endl;
-        exit(1);
-    }
+void initGame() {
+
+    if(SDL_Init(SDL_INIT_VIDEO) < 0) die("cannot init SDL");
+
     gWindow = SDL_CreateWindow("LEMURIA",0,0,800,600,SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL | SDL_WINDOW_FULLSCREEN_DESKTOP);
-    if(!gWindow) {
-        cerr << "Cannot create window" << endl;
-        exit(1);
-    }
+    if(!gWindow) die("Cannot create window");
+
     gRenderer = SDL_CreateRenderer( gWindow, -1, SDL_RENDERER_ACCELERATED );
-    if(!gRenderer) {
-        cerr << "Cannot create renderer" << endl;
-        exit(1);
-    }
-    SDL_Texture* tex = loadTexture(HELLO_BMP);
-    if(!tex) {
-        cerr << "Cannot load texture" << HELLO_BMP << endl;
-        exit(1);
-    }
+    if(!gRenderer) die("Cannot create renderer");
 
-    SDL_SetRenderDrawColor( gRenderer, 0xFF, 0xFF, 0xFF, 0xFF );
+    SDL_SetRenderDrawColor( gRenderer, 0x0, 0x0, 0x33, 0xFF );
 
+}
+void cleanupGame() {
+    SDL_DestroyRenderer(gRenderer);
+    SDL_DestroyWindow(gWindow);
+    SDL_Quit();
+}
+
+void updateGame()
+{
+    gPos.x+=gDx;
+    if (gPos.x <0 || (gPos.x + gPos.w) > 1680) gDx*=-1;
+}
+void renderGame()
+{
+    SDL_RenderCopy(gRenderer,gTex, NULL, &gPos);
+}
+
+void loadResources()
+{
+    gTex = loadTexture(HELLO_BMP);
+}
+void freeResources()
+{
+    SDL_DestroyTexture(gTex);
+}
+
+int main(int argc, char *argv[])
+{
+    initGame();
+    loadResources();
+
+    // Gameloop
     bool running = true;
-
     SDL_Event e;
 
     while(running) {
         while(SDL_PollEvent(&e)) {
             if(e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE) running = false;
         }
+        updateGame();
         SDL_RenderClear(gRenderer);
-        SDL_RenderCopy(gRenderer,tex,NULL,NULL);
+        renderGame();
         SDL_RenderPresent(gRenderer);
     }
-    SDL_DestroyTexture(tex);
-    SDL_DestroyRenderer(gRenderer);
-    SDL_DestroyWindow(gWindow);
-    SDL_Quit();
 
+    cleanupGame();
     return 0;
 }
-
