@@ -8,6 +8,8 @@ SOURCES += main.cpp
 unix {
     CONFIG += link_pkgconfig
     PKGCONFIG += sdl2
+    PKGCONFIG += SDL2_ttf
+
 }
 windows {
     INCLUDEPATH += C:/SDL2-2.0.3/include
