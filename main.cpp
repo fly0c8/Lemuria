@@ -10,13 +10,18 @@ const char* HELLO_BMP = "/home/arnold/Pictures/hello.bmp";
 //const char* HELLO_BMP = "C:/Users/arnold/Pictures/hello.bmp";
 const char* FONT = "/home/arnold/Fonts/DejaVuSans.ttf";
 
+
+const char* MESSAGE_TEXT = "Please note that smoking is prohibited on this platform. Violators will be prosecuted. Please remain seated until the smoking sign stops. Please hold on to the handlebars...";
+SDL_Texture* gMsgTex = 0;
+int gMsgX = 1280;
+
 SDL_Renderer* gRenderer = 0;
 SDL_Window* gWindow = 0;
 stringstream gErr;
 SDL_Texture* gTex = 0;
 TTF_Font* gFont = 0;
 
-SDL_Rect gPos { 0,0,800,600};
+SDL_Rect gPos { 0,300,800,600};
 int gDx = 20;
 int gFps = 0;
 SDL_Color WHITE = { 0xff,0xff,0xff };
@@ -73,36 +78,60 @@ void updateGame()
 {
     gPos.x+=gDx;
     if (gPos.x <0 || (gPos.x + gPos.w) > 1920) gDx*=-1;
+
+    gMsgX-=10;
+    if (gMsgX < -3000) gMsgX = 1280;
 }
+
+SDL_Texture* createTextureFromText(const char* text) {
+
+    SDL_Surface* textSurface = TTF_RenderText_Solid(gFont,text,WHITE);
+    assert(textSurface);
+
+    SDL_Texture* tex = SDL_CreateTextureFromSurface(gRenderer,textSurface);
+    SDL_FreeSurface(textSurface);
+
+    assert(tex);
+    return tex;
+}
+
 void renderGame()
 {
     sprintf(gFpsString,"%d",gFps);
-    SDL_Surface* textSurface = TTF_RenderText_Solid(gFont,gFpsString,WHITE);
-    assert(textSurface);
-    SDL_Texture* fpsTex = SDL_CreateTextureFromSurface(gRenderer,textSurface);
-    assert(fpsTex);
-    SDL_FreeSurface(textSurface);
+    SDL_Texture* fpsTex = createTextureFromText(gFpsString);
 
     SDL_RenderCopy(gRenderer,gTex, NULL, &gPos);
-
 
     SDL_Rect textPos { 10,10,100,30 };
     SDL_RenderCopy(gRenderer,fpsTex,NULL,&textPos);
 
     SDL_DestroyTexture(fpsTex);
+
+    Uint32 format;
+    int access;
+    int w; int h;
+    SDL_QueryTexture(gMsgTex, &format, &access,&w,&h);
+
+    SDL_Rect msgPos { gMsgX, 10, w, h };
+    SDL_RenderCopy(gRenderer,gMsgTex,NULL,&msgPos);
 }
+
 
 void loadResources()
 {
     gTex = loadTexture(HELLO_BMP);
-    gFont = TTF_OpenFont(FONT,48);
+    gFont = TTF_OpenFont(FONT,96);
     if(!gFont) {
         gErr << "TTF_OpenFont failed:" << TTF_GetError();
         die(gErr.str().c_str());
     }
+
+    gMsgTex = createTextureFromText(MESSAGE_TEXT);
+    assert(gMsgTex);
 }
 void freeResources()
 {
+    SDL_DestroyTexture(gMsgTex);
     SDL_DestroyTexture(gTex);
 }
 
@@ -120,6 +149,7 @@ int main(int argc, char *argv[])
 
 
     while(running) {
+
         frameCounter++;
         if(SDL_GetTicks() - lastUpdate > 1000) {
             lastUpdate = SDL_GetTicks();
@@ -134,9 +164,8 @@ int main(int argc, char *argv[])
         SDL_RenderClear(gRenderer);
         renderGame();
 
-
-
         SDL_RenderPresent(gRenderer);
+
     }
 
     cleanupGame();
